@@ -124,4 +124,4 @@ def line_follow(speed,kp,kd,mode,angle,check):
                 left_motor.dc(speeda)
                 right_motor.dc(speedb)
                 last_error = error
-ine_follow(100,0.4,4,0,200,True)
+line_follow(100,0.4,4,0,200,True)
