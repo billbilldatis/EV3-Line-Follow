@@ -19,23 +19,42 @@ left_motor = Motor(Port.B)
 right_motor = Motor(Port.C)
 # Initialize the drive base.
 # Start following the line endlessly.
-def line_follow(speed,kp,kd):
+def line_follow(speed,kp,kd,mode,angle):
     global error,line_sensor,der,last_error,left_motor,right_motor
-    line_sensor[1] = ColorSensor(Port.S2)
-    line_sensor[0] = ColorSensor(Port.S3)
-    # Calculate the error from the threshold.
-    error = line_sensor[0].reflection() - line_sensor[1].reflection()
-    # Calculate the turn rate.
-    der = last_error - error
-    turn_rate = kp * error + (kd*last_error)
-    speeda = speed - turn_rate
-    speedb = speed + turn_rate
-    # Set the drive base speed and turn rate.
-    left_motor.dc(speeda)
-    right_motor.dc(speedb)
-    last_error = error
+    left_motor.reset_angle(0)
+    if mode == 0:
+        while angle < left_motor.angle():
+            line_sensor[1] = ColorSensor(Port.S2)
+            line_sensor[0] = ColorSensor(Port.S3)
+            # Calculate the error from the threshold.
+            error = line_sensor[0].reflection() - line_sensor[1].reflection()
+            # Calculate the turn rate.
+            der = last_error - error
+            turn_rate = kp * error + (kd*last_error)
+            speeda = speed - turn_rate
+            speedb = speed + turn_rate
+            # Set the drive base speed and turn rate.
+            left_motor.dc(speeda)
+            right_motor.dc(speedb)
+            last_error = error
+    if mode == 1:
+        while line_sensor[1] < 25 and line_sensor[0] < 25:
+            left_motor = Motor(Port.B)
+            line_sensor[1] = ColorSensor(Port.S2)
+            line_sensor[0] = ColorSensor(Port.S3)
+            # Calculate the error from the threshold.
+            error = line_sensor[0].reflection() - line_sensor[1].reflection()
+            # Calculate the turn rate.
+            der = last_error - error
+            turn_rate = kp * error + (kd*last_error)
+            speeda = speed - turn_rate
+            speedb = speed + turn_rate
+            # Set the drive base speed and turn rate.
+            left_motor.dc(speeda)
+            right_motor.dc(speedb)
+            last_error = error
 def calc_speed(minapostasi,maxspeed):
-    distance = UltrasonicSensor(Port.S4)
+    distance = UltrasonicSensor(Port.S2)
     if distance < minapostasi:
         finalspeed = (maxspeed  *((100/ minapostasi * distance)))/100
     else:
