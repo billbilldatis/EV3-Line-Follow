@@ -1,22 +1,15 @@
 #!/usr/bin/env pybricks-micropython
-from pybricks.hubs import EV3Brick
-from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
-                                 InfraredSensor, UltrasonicSensor, GyroSensor)
-from pybricks.parameters import Port, Stop, Direction, Button, Color
-from pybricks.tools import wait, StopWatch, DataLog
+from pybricks.ev3devices import Motor, ColorSensor , UltrasonicSensor
+from pybricks.parameters import Port
+from pybricks.tools import wait
 from pybricks.robotics import DriveBase
-from pybricks.media.ev3dev import SoundFile, ImageFile
-line_sensor = [0,0]
-# Initialize the motors.
 left_motor = Motor(Port.B)
-right_motor = Motor(Port.C)
-last_error = 0
-der = 0
-# Initialize the color sensor.
-line_sensor[0] = ColorSensor(Port.S3)
-line_sensor[1] = ColorSensor(Port.S2)
-left_motor = Motor(Port.B)
-right_motor = Motor(Port.C)
+right_motor = Motor(Port.A)
+line_sensor = ColorSensor(Port.S1)
+robot = DriveBase(left_motor, right_motor, wheel_diameter=56, axle_track=152)
+kd = 2
+kp = 1.2
+ls_error = 0
 def calc_speed(minapostasi,maxspeed):
     distance = UltrasonicSensor(Port.S2)
     if distance < minapostasi:
@@ -24,104 +17,61 @@ def calc_speed(minapostasi,maxspeed):
     else:
         finalspeed =  maxspeed
     return finalspeed
+def linefollowcode(speed,kp,kd):
+    global ls_error,left_motor,right_motor
+    # Calculate the deviation from the threshold.
+    error = line_sensor.reflection() - ColorSensor(Port.S2).reflection()
+    deriv = error - ls_error
+
+    # Calculate the turn rate.
+    turn_rate = kp * error + kd * deriv
+
+    # Set the drive base speed and turn rate.
+    if speed-turn_rate < 100:
+        try:
+            left_motor.dc(speed-turn_rate)
+        except:
+            left_motor.dc(speed*-1)
+    else:
+        left_motor.dc(speed)
+    if speed+turn_rate < 100:
+        try:
+            right_motor.dc(speed+turn_rate)
+        except:
+            right_motor.dc(speed*-1)
+    else:
+        right_motor.dc(speed)
+    ls_error = error
+left_motor.reset_angle(0)
+right_motor.reset_angle(0)
 def line_follow(speed,kp,kd,mode,angle,check):
+    timer = 0
     global error,line_sensor,der,last_error,left_motor,right_motor
     left_motor.reset_angle(0)
-    StopWatch.reset()
+    #StopWatch.reset()
     if check == True:
         if mode == 0:
             while angle < left_motor.angle():
-                line_sensor[1] = ColorSensor(Port.S2)
-                line_sensor[0] = ColorSensor(Port.S3)
-                # Calculate the error from the threshold.
-                error = line_sensor[0].reflection() - line_sensor[1].reflection()
-                # Calculate the turn rate.
-                der = last_error - error
-                turn_rate = kp * error + (kd*last_error)
-                speeda = speed - turn_rate
-                speedb = speed + turn_rate
-                # Set the drive base speed and turn rate.
-                left_motor.dc(speeda)
-                right_motor.dc(speedb)
-                last_error = error
+                linefollowcode(speed,kp,kd)
         if mode == 1:
-            while line_sensor[1] < 25 and line_sensor[0] < 25:
-                left_motor = Motor(Port.B)
-                line_sensor[1] = ColorSensor(Port.S2)
-                line_sensor[0] = ColorSensor(Port.S3)
-                # Calculate the error from the threshold.
-                error = line_sensor[0].reflection() - line_sensor[1].reflection()
-                # Calculate the turn rate.
-                der = last_error - error
-                turn_rate = kp * error + (kd*last_error)
-                speeda = speed - turn_rate
-                speedb = speed + turn_rate
-                # Set the drive base speed and turn rate.
-                left_motor.dc(speeda)
-                right_motor.dc(speedb)
-                last_error = error
+            while not( line_sensor.reflection() > 25 and ColorSensor(Port.S2).reflection() > 25):
+                linefollowcode(speed,kp,kd)
         if mode == 2:
             while timer < deg:
-                timer = StopWatch.time()
-                line_sensor[1] = ColorSensor(Port.S2)
-                line_sensor[0] = ColorSensor(Port.S3)
-                # Calculate the error from the threshold.
-                error = line_sensor[0].reflection() - line_sensor[1].reflection()
-                # Calculate the turn rate.
-                der = last_error - error
-                turn_rate = kp * error + (kd*last_error)
-                speeda = speed - turn_rate
-                speedb = speed + turn_rate
-                # Set the drive base speed and turn rate.
-                left_motor.dc(speeda)
-                right_motor.dc(speedb)
-                last_error = error
+                #timer = StopWatch.time()
+                linefollowcode(speed,kp,kd)
     else:
         if mode == 0:
             while angle < left_motor.angle():
-                line_sensor[1] = ColorSensor(Port.S2)
-                line_sensor[0] = ColorSensor(Port.S3)
-                # Calculate the error from the threshold.
-                error = line_sensor[0].reflection() - line_sensor[1].reflection()
-                # Calculate the turn rate.
-                der = last_error - error
-                turn_rate = kp * error + (kd*last_error)
-                speeda = calc_speed(15,speed) - turn_rate
-                speedb = calc_speed(15,speed) + turn_rate
-                # Set the drive base speed and turn rate.
-                left_motor.dc(speeda)
-                right_motor.dc(speedb)
-                last_error = error
+                linefollowcode(speed,kp,kd)
         if mode == 1:
-            while line_sensor[1] < 25 and line_sensor[0] < 25:
-                left_motor = Motor(Port.B)
-                line_sensor[1] = ColorSensor(Port.S2)
-                line_sensor[0] = ColorSensor(Port.S3)
-                # Calculate the error from the threshold.
-                error = line_sensor[0].reflection() - line_sensor[1].reflection()
-                # Calculate the turn rate.
-                der = last_error - error
-                turn_rate = kp * error + (kd*last_error)
-                speeda = calc_speed(15,speed) - turn_rate
-                speedb = calc_speed(15,speed) + turn_rate
-                # Set the drive base speed and turn rate.
-                left_motor.dc(speeda)
-                right_motor.dc(speedb)
-                last_error = error
+            while not( line_sensor.reflection() > 25 and ColorSensor(Port.S2).reflection() > 25):
+                linefollowcode(speed,kp,kd)
         if mode == 2:
             while timer < deg:
+                #linefollowcode(speed,kp,kd)
                 timer = StopWatch.time()
-                line_sensor[1] = ColorSensor(Port.S2)
-                line_sensor[0] = ColorSensor(Port.S3)
-                # Calculate the error from the threshold.
-                error = line_sensor[0].reflection() - line_sensor[1].reflection()
-                # Calculate the turn rate.
-                der = last_error - error
-                turn_rate = kp * error + (kd*last_error)
-                speeda = calc_speed(15,speed) - turn_rate
-                speedb = calc_speed(15,speed) + turn_rate
-                # Set the drive base speed and turn rate.
-                left_motor.dc(speeda)
-                right_motor.dc(speedb)
-                last_error = error
-line_follow(100,0.4,4,0,200,False)
+left_motor.reset_angle(0)
+right_motor.reset_angle(0)
+right_motor.hold()
+left_motor.hold()
